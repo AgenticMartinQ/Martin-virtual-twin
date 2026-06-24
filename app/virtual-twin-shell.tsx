@@ -13,6 +13,7 @@ type DynamicVariables = Record<string, string | number | boolean>;
 
 type SessionResponse = {
   agent_id: string;
+  conversation_token?: string;
   voice_id?: string;
   dynamic_variables: DynamicVariables;
 };
@@ -71,7 +72,7 @@ function VirtualTwinExperience() {
       setConnectionOverlay("success");
       if (pendingOutboundMessageRef.current) {
         conversation.sendUserActivity();
-        conversation.sendMultimodalMessage({ text: pendingOutboundMessageRef.current });
+        conversation.sendUserMessage(pendingOutboundMessageRef.current);
         pendingOutboundMessageRef.current = null;
       }
       window.setTimeout(() => setConnectionOverlay(null), 1600);
@@ -196,10 +197,14 @@ function VirtualTwinExperience() {
         stream.getTracks().forEach((track) => track.stop());
       });
 
-      const { agent_id: agentId, voice_id: voiceId, dynamic_variables: dynamicVariables } = await getSessionConfig(cleanName);
+      const {
+        agent_id: agentId,
+        conversation_token: conversationToken,
+        voice_id: voiceId,
+        dynamic_variables: dynamicVariables,
+      } = await getSessionConfig(cleanName);
 
-      conversation.startSession({
-        agentId,
+      const sessionOptions = {
         userId: "martin-public-visitor",
         dynamicVariables,
         overrides: voiceId
@@ -209,7 +214,19 @@ function VirtualTwinExperience() {
               },
             }
           : undefined,
-      });
+      };
+
+      if (conversationToken) {
+        conversation.startSession({
+          conversationToken,
+          ...sessionOptions,
+        });
+      } else {
+        conversation.startSession({
+          agentId,
+          ...sessionOptions,
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to start voice conversation.";
       setConnectionNote("Needs attention");
@@ -274,7 +291,7 @@ function VirtualTwinExperience() {
     localUserMessageRef.current = text;
     appendMessage("visitor", text);
     conversation.sendUserActivity();
-    conversation.sendMultimodalMessage({ text });
+    conversation.sendUserMessage(text);
     setInputValue("");
   }
 
