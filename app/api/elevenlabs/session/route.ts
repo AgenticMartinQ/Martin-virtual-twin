@@ -11,9 +11,11 @@ export async function POST(request: Request) {
   const { mode } = requestSchema.parse(body);
   const dynamicVariables = await getTwinDynamicVariables(mode as TwinMode);
   const agentId = process.env.ELEVENLABS_AGENT_ID ?? process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ?? "";
+  const voiceId = process.env.ELEVENLABS_VOICE_ID ?? "";
 
   return NextResponse.json({
     agent_id: agentId,
+    voice_id: voiceId,
     dynamic_variables: dynamicVariables,
   });
 }

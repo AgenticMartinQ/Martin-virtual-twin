@@ -13,6 +13,7 @@ type DynamicVariables = Record<string, string | number | boolean>;
 
 type SessionResponse = {
   agent_id: string;
+  voice_id?: string;
   dynamic_variables: DynamicVariables;
 };
 
@@ -168,12 +169,19 @@ function VirtualTwinExperience() {
         stream.getTracks().forEach((track) => track.stop());
       });
 
-      const { agent_id: agentId, dynamic_variables: dynamicVariables } = await getSessionConfig();
+      const { agent_id: agentId, voice_id: voiceId, dynamic_variables: dynamicVariables } = await getSessionConfig();
 
       conversation.startSession({
         agentId,
         userId: "martin-public-visitor",
         dynamicVariables,
+        overrides: voiceId
+          ? {
+              tts: {
+                voiceId,
+              },
+            }
+          : undefined,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to start voice conversation.";
