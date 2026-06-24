@@ -107,6 +107,8 @@ Then copy the ElevenLabs webhook secret into Vercel:
 ELEVENLABS_WEBHOOK_SECRET=
 ```
 
+Production webhook requests are rejected unless this value is configured. Local development can still accept unsigned mock payloads.
+
 Redeploy after changing environment variables.
 
 ## 8. Final Smoke Tests

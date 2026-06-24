@@ -57,6 +57,8 @@ ElevenLabs post-call webhook:
 POST /api/elevenlabs/post-call
 ```
 
+In production, this route requires `ELEVENLABS_WEBHOOK_SECRET` and validates the `ElevenLabs-Signature` header before saving anything to Supabase.
+
 Production webhook URL after domain setup:
 
 ```text

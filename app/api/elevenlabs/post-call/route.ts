@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get("elevenlabs-signature");
   const webhookSecret = process.env.ELEVENLABS_WEBHOOK_SECRET;
+  const allowUnsignedWebhook = process.env.NODE_ENV !== "production";
 
   let event: ElevenLabsWebhookEvent;
 
@@ -48,8 +49,10 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json({ error: "Invalid ElevenLabs signature" }, { status: 401 });
     }
-  } else {
+  } else if (allowUnsignedWebhook) {
     event = JSON.parse(rawBody) as ElevenLabsWebhookEvent;
+  } else {
+    return NextResponse.json({ error: "ElevenLabs webhook secret is not configured" }, { status: 500 });
   }
 
   const supabase = getSupabaseAdmin();
