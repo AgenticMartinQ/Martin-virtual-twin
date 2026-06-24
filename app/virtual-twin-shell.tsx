@@ -45,6 +45,7 @@ function VirtualTwinExperience() {
   const inputRef = useRef<HTMLInputElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const localUserMessageRef = useRef<string | null>(null);
+  const pendingOutboundMessageRef = useRef<string | null>(null);
   const [introHidden, setIntroHidden] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
@@ -68,6 +69,11 @@ function VirtualTwinExperience() {
     onConnect: () => {
       setConnectionNote("Connected");
       setConnectionOverlay("success");
+      if (pendingOutboundMessageRef.current) {
+        conversation.sendUserActivity();
+        conversation.sendUserMessage(pendingOutboundMessageRef.current);
+        pendingOutboundMessageRef.current = null;
+      }
       window.setTimeout(() => setConnectionOverlay(null), 1600);
     },
     onDisconnect: () => {
@@ -243,7 +249,20 @@ function VirtualTwinExperience() {
     }
 
     if (!isConnected) {
-      appendMessage("twin", "Start the voice conversation with the microphone button first, then send your message.");
+      if (!visitorName) {
+        setConnectionOverlay("name");
+        return;
+      }
+
+      localUserMessageRef.current = text;
+      pendingOutboundMessageRef.current = text;
+      appendMessage("visitor", text);
+      setInputValue("");
+
+      if (!isConnecting) {
+        await startVoiceConversation();
+      }
+
       return;
     }
 
@@ -416,7 +435,7 @@ function VirtualTwinExperience() {
             }}
           />
         </label>
-        <button className="send-button" type="submit" aria-label="Send message" disabled={!isConnected}>
+        <button className="send-button" type="submit" aria-label="Send message" disabled={!inputValue.trim()}>
           Send
         </button>
       </form>
