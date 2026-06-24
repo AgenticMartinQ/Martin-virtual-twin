@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         apiKey: process.env.ELEVENLABS_API_KEY,
       });
 
-      event = elevenlabs.webhooks.constructEvent(rawBody, signature, webhookSecret) as ElevenLabsWebhookEvent;
+      event = (await elevenlabs.webhooks.constructEvent(rawBody, signature, webhookSecret)) as ElevenLabsWebhookEvent;
     } catch {
       return NextResponse.json({ error: "Invalid ElevenLabs signature" }, { status: 401 });
     }
@@ -65,7 +65,8 @@ export async function POST(request: Request) {
 
     const { data: conversation, error } = await supabase
       .from("conversations")
-      .insert({
+      .upsert(
+        {
         elevenlabs_conversation_id: event.data.conversation_id,
         user_id: userId,
         mode,
@@ -76,7 +77,9 @@ export async function POST(request: Request) {
           ? new Date(event.data.metadata.start_time_unix_secs * 1000).toISOString()
           : null,
         ended_at: event.event_timestamp ? new Date(event.event_timestamp * 1000).toISOString() : null,
-      })
+        },
+        { onConflict: "elevenlabs_conversation_id" }
+      )
       .select("id")
       .single();
 
