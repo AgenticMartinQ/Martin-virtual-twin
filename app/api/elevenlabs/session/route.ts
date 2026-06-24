@@ -45,7 +45,8 @@ async function getConversationToken(agentId: string, participantName?: string) {
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const { mode, visitorName } = requestSchema.parse(body);
-  const dynamicVariables = await getTwinDynamicVariables(mode as TwinMode);
+  const memoryDynamicVariables =
+    process.env.ELEVENLABS_ENABLE_SUPABASE_CONTEXT === "true" ? await getTwinDynamicVariables(mode as TwinMode) : {};
   const agentId = process.env.ELEVENLABS_AGENT_ID ?? process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ?? "";
   const voiceId = process.env.ELEVENLABS_ENABLE_TTS_OVERRIDE === "true" ? process.env.ELEVENLABS_VOICE_ID ?? "" : "";
   const visitorId = visitorName ? visitorName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : "";
@@ -68,7 +69,9 @@ export async function POST(request: Request) {
     conversation_token: conversationToken,
     voice_id: voiceId,
     dynamic_variables: {
-      ...dynamicVariables,
+      ...memoryDynamicVariables,
+      mode,
+      user_name: "Martin",
       visitor_name: visitorName ?? "",
       visitor_id: visitorId,
     },
