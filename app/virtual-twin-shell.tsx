@@ -47,6 +47,7 @@ function VirtualTwinExperience() {
   const transcriptRef = useRef<HTMLDivElement>(null);
   const localUserMessageRef = useRef<string | null>(null);
   const pendingOutboundMessageRef = useRef<string | null>(null);
+  const connectionWarningShownRef = useRef(false);
   const [introHidden, setIntroHidden] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
@@ -56,6 +57,7 @@ function VirtualTwinExperience() {
   const [pendingVisitorName, setPendingVisitorName] = useState("");
   const [connectionOverlay, setConnectionOverlay] = useState<ConnectionOverlay>(null);
   const [connectionNote, setConnectionNote] = useState("Ready");
+  const [connectionStarted, setConnectionStarted] = useState(false);
 
   const appendMessage = useCallback((role: Message["role"], text: string) => {
     setMessages((current) => [...current, { id: Date.now() + Math.random(), role, text }]);
@@ -70,6 +72,7 @@ function VirtualTwinExperience() {
     onConnect: () => {
       setConnectionNote("Connected");
       setConnectionOverlay("success");
+      connectionWarningShownRef.current = false;
       if (pendingOutboundMessageRef.current) {
         conversation.sendUserActivity();
         conversation.sendUserMessage(pendingOutboundMessageRef.current);
@@ -78,7 +81,7 @@ function VirtualTwinExperience() {
       window.setTimeout(() => setConnectionOverlay(null), 1600);
     },
     onDisconnect: () => {
-      setConnectionNote("Ready");
+      setConnectionNote("Ended");
     },
     onError: (message) => {
       setConnectionNote("Needs attention");
@@ -189,6 +192,11 @@ function VirtualTwinExperience() {
       return;
     }
 
+    if (isConnected || isConnecting || connectionStarted) {
+      return;
+    }
+
+    setConnectionStarted(true);
     setConnectionNote("Connecting");
     setConnectionOverlay("loading");
 
@@ -230,15 +238,14 @@ function VirtualTwinExperience() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to start voice conversation.";
       setConnectionNote("Needs attention");
-      setConnectionOverlay("name");
+      setConnectionOverlay(null);
       appendMessage("twin", message);
     }
   }
 
-  async function toggleVoiceConversation() {
-    if (isConnected || isConnecting) {
-      conversation.endSession();
-      setConnectionNote("Ready");
+  function toggleVoiceInput() {
+    if (isConnected) {
+      conversation.setMuted(!conversation.isMuted);
       return;
     }
 
@@ -247,7 +254,10 @@ function VirtualTwinExperience() {
       return;
     }
 
-    await startVoiceConversation();
+    if (!connectionWarningShownRef.current) {
+      connectionWarningShownRef.current = true;
+      appendMessage("twin", "The ElevenLabs connection is not ready yet. Please wait for the connection to complete before using voice input.");
+    }
   }
 
   async function submitVisitorName(event: FormEvent<HTMLFormElement>) {
@@ -276,15 +286,18 @@ function VirtualTwinExperience() {
         return;
       }
 
-      localUserMessageRef.current = text;
-      pendingOutboundMessageRef.current = text;
-      appendMessage("visitor", text);
-      setInputValue("");
-
-      if (!isConnecting) {
-        await startVoiceConversation();
+      if (isConnecting) {
+        localUserMessageRef.current = text;
+        pendingOutboundMessageRef.current = text;
+        appendMessage("visitor", text);
+        setInputValue("");
+        return;
       }
 
+      if (!connectionWarningShownRef.current) {
+        connectionWarningShownRef.current = true;
+        appendMessage("twin", "The ElevenLabs connection is not ready yet. Please wait for the connection to complete before sending another message.");
+      }
       return;
     }
 
@@ -325,7 +338,7 @@ function VirtualTwinExperience() {
                 placeholder="Your name"
                 maxLength={80}
               />
-              <button type="submit" disabled={!pendingVisitorName.trim()}>
+              <button type="submit" disabled={!pendingVisitorName.trim() || connectionStarted || isConnecting}>
                 Start Conversation
               </button>
             </form>
@@ -433,10 +446,12 @@ function VirtualTwinExperience() {
         onSubmit={submitMessage}
       >
         <button
-          className={`mic-button${isConnected ? " is-connected" : ""}${isConnecting ? " is-connecting" : ""}`}
+          className={`mic-button${isConnected ? " is-connected" : ""}${isConnecting ? " is-connecting" : ""}${
+            conversation.isMuted ? " is-muted" : ""
+          }`}
           type="button"
-          aria-label={isConnected || isConnecting ? "End voice conversation" : "Start voice conversation"}
-          onClick={toggleVoiceConversation}
+          aria-label={isConnected ? (conversation.isMuted ? "Unmute microphone" : "Mute microphone") : "Voice connection pending"}
+          onClick={toggleVoiceInput}
         >
           <span aria-hidden="true" />
         </button>
