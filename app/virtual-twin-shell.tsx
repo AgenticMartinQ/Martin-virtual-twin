@@ -71,7 +71,7 @@ function VirtualTwinExperience() {
       setConnectionOverlay("success");
       if (pendingOutboundMessageRef.current) {
         conversation.sendUserActivity();
-        conversation.sendUserMessage(pendingOutboundMessageRef.current);
+        conversation.sendMultimodalMessage({ text: pendingOutboundMessageRef.current });
         pendingOutboundMessageRef.current = null;
       }
       window.setTimeout(() => setConnectionOverlay(null), 1600);
@@ -82,6 +82,11 @@ function VirtualTwinExperience() {
     onError: (message) => {
       setConnectionNote("Needs attention");
       appendMessage("twin", `Connection issue: ${message}`);
+    },
+    onDebug: (event) => {
+      if (event && typeof event === "object" && "type" in event && event.type === "error") {
+        appendMessage("twin", "ElevenLabs returned an error while processing the message.");
+      }
     },
     onMessage: ({ role, message }) => {
       if (!message) {
@@ -269,7 +274,7 @@ function VirtualTwinExperience() {
     localUserMessageRef.current = text;
     appendMessage("visitor", text);
     conversation.sendUserActivity();
-    conversation.sendUserMessage(text);
+    conversation.sendMultimodalMessage({ text });
     setInputValue("");
   }
 
