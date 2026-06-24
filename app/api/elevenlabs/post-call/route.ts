@@ -60,7 +60,8 @@ export async function POST(request: Request) {
   if (supabase && event.type === "post_call_transcription" && event.data?.conversation_id) {
     const dynamicVariables = event.data.conversation_initiation_client_data?.dynamic_variables ?? {};
     const mode = dynamicVariables.mode === "learning" ? "learning" : "socialization";
-    const userId = event.data.user_id ?? process.env.MARTIN_USER_ID ?? "martin";
+    const userId = process.env.MARTIN_USER_ID ?? "martin";
+    const visitorName = typeof dynamicVariables.visitor_name === "string" ? dynamicVariables.visitor_name : null;
 
     const { data: conversation, error } = await supabase
       .from("conversations")
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
         elevenlabs_conversation_id: event.data.conversation_id,
         user_id: userId,
         mode,
+        visitor_id: visitorName,
         transcript: event.data.transcript ?? [],
         raw_payload: event,
         started_at: event.data.metadata?.start_time_unix_secs

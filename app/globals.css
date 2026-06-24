@@ -183,6 +183,122 @@ h1 {
   backdrop-filter: blur(12px);
 }
 
+.connection-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  pointer-events: none;
+}
+
+.connection-card {
+  display: grid;
+  gap: 14px;
+  width: min(380px, calc(100vw - 40px));
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(7, 14, 18, 0.48);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+  text-align: center;
+  backdrop-filter: blur(22px);
+  pointer-events: auto;
+}
+
+.connection-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.connection-card h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.35rem, 2.4vw, 1.8rem);
+  line-height: 1.12;
+}
+
+.connection-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.connection-card input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  padding: 0 14px;
+  text-align: center;
+}
+
+.connection-card input::placeholder {
+  color: rgba(248, 245, 238, 0.46);
+}
+
+.connection-card button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent-2);
+  color: #061012;
+  font-weight: 800;
+}
+
+.connection-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.connection-card-status {
+  justify-items: center;
+}
+
+.loading-ring {
+  width: 38px;
+  height: 38px;
+  border: 3px solid rgba(248, 245, 238, 0.24);
+  border-top-color: var(--accent-2);
+  border-radius: 999px;
+  animation: spin 900ms linear infinite;
+}
+
+.success-mark {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: 2px solid var(--accent-2);
+  border-radius: 999px;
+  box-shadow: 0 0 20px rgba(105, 208, 197, 0.36);
+}
+
+.success-mark::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: 13px;
+  width: 13px;
+  height: 8px;
+  border-bottom: 3px solid var(--accent-2);
+  border-left: 3px solid var(--accent-2);
+  transform: rotate(-45deg);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .history-panel,
 .conversation-panel,
 .chat-dock {

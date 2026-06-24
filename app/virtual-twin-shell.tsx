@@ -17,16 +17,13 @@ type SessionResponse = {
   dynamic_variables: DynamicVariables;
 };
 
+type ConnectionOverlay = "name" | "loading" | "success" | null;
+
 const initialMessages: Message[] = [
   {
     id: 1,
     role: "twin",
     text: "Hi, I am Martin's virtual twin. Once connected, I can discuss Martin's work, projects, values, and perspectives.",
-  },
-  {
-    id: 2,
-    role: "visitor",
-    text: "What should I ask you first?",
   },
   {
     id: 3,
@@ -53,6 +50,9 @@ function VirtualTwinExperience() {
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
   const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState("");
+  const [visitorName, setVisitorName] = useState("");
+  const [pendingVisitorName, setPendingVisitorName] = useState("");
+  const [connectionOverlay, setConnectionOverlay] = useState<ConnectionOverlay>(null);
   const [connectionNote, setConnectionNote] = useState("Ready");
 
   const appendMessage = useCallback((role: Message["role"], text: string) => {
@@ -65,9 +65,10 @@ function VirtualTwinExperience() {
   }, []);
 
   const conversation = useConversation({
-    onConnect: ({ conversationId }) => {
+    onConnect: () => {
       setConnectionNote("Connected");
-      appendMessage("twin", `Connected to Martin's virtual twin. Conversation ID: ${conversationId}`);
+      setConnectionOverlay("success");
+      window.setTimeout(() => setConnectionOverlay(null), 1600);
     },
     onDisconnect: () => {
       setConnectionNote("Ready");
@@ -99,10 +100,17 @@ function VirtualTwinExperience() {
 
   function revealConversation() {
     setIntroHidden(true);
+    if (!visitorName) {
+      setConnectionOverlay("name");
+    }
     if (window.innerWidth >= 1100) {
       setHistoryCollapsed(false);
     }
-    window.setTimeout(() => inputRef.current?.focus(), 280);
+    window.setTimeout(() => {
+      if (visitorName) {
+        inputRef.current?.focus();
+      }
+    }, 280);
   }
 
   async function toggleIntroVideo() {
@@ -139,13 +147,13 @@ function VirtualTwinExperience() {
     revealConversation();
   }
 
-  async function getSessionConfig(): Promise<SessionResponse> {
+  async function getSessionConfig(name: string): Promise<SessionResponse> {
     const response = await fetch("/api/elevenlabs/session", {
       method: "POST",
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ mode: "socialization" }),
+      body: JSON.stringify({ mode: "socialization", visitorName: name }),
     });
 
     if (!response.ok) {
@@ -161,15 +169,23 @@ function VirtualTwinExperience() {
     return data;
   }
 
-  async function startVoiceConversation() {
+  async function startVoiceConversation(name = visitorName) {
+    const cleanName = name.trim();
+
+    if (!cleanName) {
+      setConnectionOverlay("name");
+      return;
+    }
+
     setConnectionNote("Connecting");
+    setConnectionOverlay("loading");
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         stream.getTracks().forEach((track) => track.stop());
       });
 
-      const { agent_id: agentId, voice_id: voiceId, dynamic_variables: dynamicVariables } = await getSessionConfig();
+      const { agent_id: agentId, voice_id: voiceId, dynamic_variables: dynamicVariables } = await getSessionConfig(cleanName);
 
       conversation.startSession({
         agentId,
@@ -186,6 +202,7 @@ function VirtualTwinExperience() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to start voice conversation.";
       setConnectionNote("Needs attention");
+      setConnectionOverlay("name");
       appendMessage("twin", message);
     }
   }
@@ -197,7 +214,24 @@ function VirtualTwinExperience() {
       return;
     }
 
+    if (!visitorName) {
+      setConnectionOverlay("name");
+      return;
+    }
+
     await startVoiceConversation();
+  }
+
+  async function submitVisitorName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const cleanName = pendingVisitorName.trim();
+    if (!cleanName) {
+      return;
+    }
+
+    setVisitorName(cleanName);
+    await startVoiceConversation(cleanName);
   }
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
@@ -235,6 +269,44 @@ function VirtualTwinExperience() {
       />
 
       <div className="scrim" aria-hidden="true" />
+
+      {introHidden && connectionOverlay ? (
+        <section className="connection-overlay" aria-live="polite">
+          {connectionOverlay === "name" ? (
+            <form className="connection-card" onSubmit={submitVisitorName}>
+              <p className="connection-eyebrow">Before We Start</p>
+              <h2>What should Martin&apos;s Twin call you?</h2>
+              <input
+                autoFocus
+                type="text"
+                value={pendingVisitorName}
+                onChange={(event) => setPendingVisitorName(event.target.value)}
+                placeholder="Your name"
+                maxLength={80}
+              />
+              <button type="submit" disabled={!pendingVisitorName.trim()}>
+                Start Conversation
+              </button>
+            </form>
+          ) : null}
+
+          {connectionOverlay === "loading" ? (
+            <div className="connection-card connection-card-status">
+              <span className="loading-ring" aria-hidden="true" />
+              <h2>Connecting to Martin&apos;s Twin</h2>
+              <p>Setting up the voice conversation for {visitorName || pendingVisitorName}.</p>
+            </div>
+          ) : null}
+
+          {connectionOverlay === "success" ? (
+            <div className="connection-card connection-card-status">
+              <span className="success-mark" aria-hidden="true" />
+              <h2>Connected</h2>
+              <p>{visitorName}, you can speak or type now.</p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section id="introLayer" className={`intro-layer${introHidden ? " is-hidden" : ""}`}>
         <div className="brand-lockup">
@@ -306,7 +378,7 @@ function VirtualTwinExperience() {
         <div id="transcript" className="transcript" aria-live="polite" ref={transcriptRef}>
           {messages.map((message) => (
             <article className={`message ${message.role}`} key={message.id}>
-              <span>{message.role === "visitor" ? "Visitor" : "Martin Twin"}</span>
+              <span>{message.role === "visitor" ? visitorName || "Visitor" : "Martin's Twin"}</span>
               <p>{message.text}</p>
             </article>
           ))}
