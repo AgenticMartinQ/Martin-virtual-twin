@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const { mode, visitorName } = requestSchema.parse(body);
   const dynamicVariables = await getTwinDynamicVariables(mode as TwinMode);
   const agentId = process.env.ELEVENLABS_AGENT_ID ?? process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID ?? "";
-  const voiceId = process.env.ELEVENLABS_VOICE_ID ?? "";
+  const voiceId = process.env.ELEVENLABS_ENABLE_TTS_OVERRIDE === "true" ? process.env.ELEVENLABS_VOICE_ID ?? "" : "";
   const visitorId = visitorName ? visitorName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : "";
 
   if (!agentId) {

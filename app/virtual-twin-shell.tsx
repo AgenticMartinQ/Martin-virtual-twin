@@ -172,7 +172,9 @@ function VirtualTwinExperience() {
     });
 
     if (!response.ok) {
-      throw new Error("Unable to prepare the ElevenLabs session.");
+      const errorData = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      const detail = typeof errorData?.error === "string" ? errorData.error : "Unable to prepare the ElevenLabs session.";
+      throw new Error(detail);
     }
 
     const data = (await response.json()) as SessionResponse;
