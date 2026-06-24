@@ -1,11 +1,19 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
+import { FormEvent, useCallback, useRef, useState } from "react";
 
 type Message = {
   id: number;
   role: "twin" | "visitor";
   text: string;
+};
+
+type DynamicVariables = Record<string, string | number | boolean>;
+
+type SessionResponse = {
+  agent_id: string;
+  dynamic_variables: DynamicVariables;
 };
 
 const initialMessages: Message[] = [
@@ -27,13 +35,66 @@ const initialMessages: Message[] = [
 ];
 
 export function VirtualTwinShell() {
+  return (
+    <ConversationProvider>
+      <VirtualTwinExperience />
+    </ConversationProvider>
+  );
+}
+
+function VirtualTwinExperience() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const localUserMessageRef = useRef<string | null>(null);
   const [introHidden, setIntroHidden] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
   const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState("");
+  const [connectionNote, setConnectionNote] = useState("Ready");
+
+  const appendMessage = useCallback((role: Message["role"], text: string) => {
+    setMessages((current) => [...current, { id: Date.now() + Math.random(), role, text }]);
+    window.setTimeout(() => {
+      if (transcriptRef.current) {
+        transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+      }
+    }, 0);
+  }, []);
+
+  const conversation = useConversation({
+    onConnect: ({ conversationId }) => {
+      setConnectionNote("Connected");
+      appendMessage("twin", `Connected to Martin's virtual twin. Conversation ID: ${conversationId}`);
+    },
+    onDisconnect: () => {
+      setConnectionNote("Ready");
+    },
+    onError: (message) => {
+      setConnectionNote("Needs attention");
+      appendMessage("twin", `Connection issue: ${message}`);
+    },
+    onMessage: ({ role, message }) => {
+      if (!message) {
+        return;
+      }
+
+      if (role === "user") {
+        if (localUserMessageRef.current === message) {
+          localUserMessageRef.current = null;
+          return;
+        }
+        appendMessage("visitor", message);
+        return;
+      }
+
+      appendMessage("twin", message);
+    },
+  });
+
+  const isConnected = conversation.status === "connected";
+  const isConnecting = conversation.status === "connecting";
 
   function revealConversation() {
     setIntroHidden(true);
@@ -77,7 +138,61 @@ export function VirtualTwinShell() {
     revealConversation();
   }
 
-  function submitMessage(event: FormEvent<HTMLFormElement>) {
+  async function getSessionConfig(): Promise<SessionResponse> {
+    const response = await fetch("/api/elevenlabs/session", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ mode: "socialization" }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Unable to prepare the ElevenLabs session.");
+    }
+
+    const data = (await response.json()) as SessionResponse;
+
+    if (!data.agent_id) {
+      throw new Error("ElevenLabs agent ID is not configured yet.");
+    }
+
+    return data;
+  }
+
+  async function startVoiceConversation() {
+    setConnectionNote("Connecting");
+
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+      });
+
+      const { agent_id: agentId, dynamic_variables: dynamicVariables } = await getSessionConfig();
+
+      conversation.startSession({
+        agentId,
+        userId: "martin-public-visitor",
+        dynamicVariables,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to start voice conversation.";
+      setConnectionNote("Needs attention");
+      appendMessage("twin", message);
+    }
+  }
+
+  async function toggleVoiceConversation() {
+    if (isConnected || isConnecting) {
+      conversation.endSession();
+      setConnectionNote("Ready");
+      return;
+    }
+
+    await startVoiceConversation();
+  }
+
+  async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const text = inputValue.trim();
@@ -85,15 +200,15 @@ export function VirtualTwinShell() {
       return;
     }
 
-    setMessages((current) => [
-      ...current,
-      { id: Date.now(), role: "visitor", text },
-      {
-        id: Date.now() + 1,
-        role: "twin",
-        text: "This is a design draft response. In the next build step, this area will stream the real ElevenLabs conversation.",
-      },
-    ]);
+    if (!isConnected) {
+      appendMessage("twin", "Start the voice conversation with the microphone button first, then send your message.");
+      return;
+    }
+
+    localUserMessageRef.current = text;
+    appendMessage("visitor", text);
+    conversation.sendUserActivity();
+    conversation.sendUserMessage(text);
     setInputValue("");
   }
 
@@ -178,9 +293,9 @@ export function VirtualTwinShell() {
       >
         <div className="panel-heading">
           <span>Live Conversation</span>
-          <span className="status-dot">Ready</span>
+          <span className="status-dot">{connectionNote}</span>
         </div>
-        <div id="transcript" className="transcript" aria-live="polite">
+        <div id="transcript" className="transcript" aria-live="polite" ref={transcriptRef}>
           {messages.map((message) => (
             <article className={`message ${message.role}`} key={message.id}>
               <span>{message.role === "visitor" ? "Visitor" : "Martin Twin"}</span>
@@ -196,7 +311,12 @@ export function VirtualTwinShell() {
         aria-label="Chat controls"
         onSubmit={submitMessage}
       >
-        <button className="mic-button" type="button" aria-label="Start voice conversation">
+        <button
+          className={`mic-button${isConnected ? " is-connected" : ""}${isConnecting ? " is-connecting" : ""}`}
+          type="button"
+          aria-label={isConnected || isConnecting ? "End voice conversation" : "Start voice conversation"}
+          onClick={toggleVoiceConversation}
+        >
           <span aria-hidden="true" />
         </button>
         <label className="chat-input-wrap">
@@ -208,10 +328,15 @@ export function VirtualTwinShell() {
             autoComplete="off"
             placeholder="Ask about Martin's work, ideas, or experience..."
             value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
+            onChange={(event) => {
+              setInputValue(event.target.value);
+              if (isConnected) {
+                conversation.sendUserActivity();
+              }
+            }}
           />
         </label>
-        <button className="send-button" type="submit" aria-label="Send message">
+        <button className="send-button" type="submit" aria-label="Send message" disabled={!isConnected}>
           Send
         </button>
       </form>
