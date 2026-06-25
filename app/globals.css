@@ -188,7 +188,7 @@ h1 {
   z-index: 6;
   left: clamp(16px, 2vw, 28px);
   bottom: clamp(18px, 4vh, 34px);
-  width: min(180px, calc(100vw - 32px));
+  width: min(230px, calc(100vw - 32px));
   color: var(--ink);
 }
 
@@ -198,9 +198,11 @@ h1 {
 
 .tips-widget summary {
   display: grid;
-  gap: 2px;
-  min-height: 54px;
-  padding: 10px 14px;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 68px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--glass);
@@ -213,7 +215,23 @@ h1 {
   display: none;
 }
 
+.tips-widget summary img {
+  display: block;
+  width: 46px;
+  height: 46px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  background: #ffffff;
+  object-fit: cover;
+}
+
 .tips-widget summary span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tips-widget summary small {
   color: var(--accent);
   font-size: 0.7rem;
   font-weight: 800;
@@ -222,7 +240,8 @@ h1 {
 
 .tips-widget summary strong {
   color: rgba(248, 245, 238, 0.88);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
+  line-height: 1.2;
 }
 
 .tips-card {

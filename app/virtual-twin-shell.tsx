@@ -568,8 +568,11 @@ function VirtualTwinExperience() {
 
       <details className="tips-widget">
         <summary>
-          <span>Tips</span>
-          <strong>Support token cost</strong>
+          <img src="/assets/payme-qr.jpg" alt="" aria-hidden="true" />
+          <span>
+            <small>Tips</small>
+            <strong>Scan to support token cost</strong>
+          </span>
         </summary>
         <div className="tips-card">
           <p>If this chat was useful, a small PayMe tip helps sponsor the token cost of keeping Martin&apos;s Twin running.</p>
