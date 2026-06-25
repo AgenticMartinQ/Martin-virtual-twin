@@ -98,6 +98,10 @@ function VirtualTwinExperience() {
   const [connectionNote, setConnectionNote] = useState("Ready");
   const [connectionStarted, setConnectionStarted] = useState(false);
   const [databaseConversationId, setDatabaseConversationId] = useState("");
+  const [adminPortalOpen, setAdminPortalOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
 
   const appendMessage = useCallback((role: Message["role"], text: string) => {
     setMessages((current) => [...current, { id: Date.now() + Math.random(), role, text }]);
@@ -490,6 +494,42 @@ function VirtualTwinExperience() {
     setInputValue("");
   }
 
+  async function submitAdminPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const cleanPassword = adminPassword.trim();
+    if (!cleanPassword) {
+      return;
+    }
+
+    setAdminLoading(true);
+    setAdminError("");
+
+    try {
+      const response = await fetch("/api/admin/stats", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ password: cleanPassword }),
+        cache: "no-store",
+      });
+      const data = (await response.json().catch(() => null)) as { error?: unknown } | null;
+
+      if (!response.ok) {
+        const detail = typeof data?.error === "string" ? data.error : "Unable to open admin dashboard.";
+        throw new Error(detail);
+      }
+
+      window.sessionStorage.setItem("martin-admin-password", cleanPassword);
+      window.location.href = "/admin";
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : "Unable to open admin dashboard.");
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
   return (
     <main className="stage" aria-label="Martin Virtual Twin website draft">
       <video
@@ -505,6 +545,41 @@ function VirtualTwinExperience() {
       />
 
       <div className="scrim" aria-hidden="true" />
+
+      <button className="admin-entry-button" type="button" onClick={() => setAdminPortalOpen(true)}>
+        Admin
+      </button>
+
+      {adminPortalOpen ? (
+        <section className="admin-portal-overlay" aria-label="Admin dashboard login" aria-modal="true" role="dialog">
+          <form className="admin-portal-card" onSubmit={submitAdminPassword}>
+            <button
+              className="admin-portal-close"
+              type="button"
+              aria-label="Close admin login"
+              onClick={() => {
+                setAdminPortalOpen(false);
+                setAdminError("");
+              }}
+            >
+              ×
+            </button>
+            <p className="connection-eyebrow">Admin Portal</p>
+            <h2>Open Visitor Dashboard</h2>
+            <input
+              autoFocus
+              type="password"
+              value={adminPassword}
+              onChange={(event) => setAdminPassword(event.target.value)}
+              placeholder="Admin password"
+            />
+            <button type="submit" disabled={!adminPassword.trim() || adminLoading}>
+              {adminLoading ? "Checking" : "Open Dashboard"}
+            </button>
+            {adminError ? <p className="admin-portal-error">{adminError}</p> : null}
+          </form>
+        </section>
+      ) : null}
 
       {introHidden && connectionOverlay ? (
         <section className="connection-overlay" aria-live="polite">
