@@ -20,6 +20,39 @@ type SessionResponse = {
 
 type ConnectionOverlay = "name" | "loading" | "success" | null;
 
+const recentInterests = [
+  {
+    title: "Agentic AI for financial services",
+    detail: "How autonomous workflows can improve banking operations, advisory productivity, and risk controls.",
+    date: "Latest",
+  },
+  {
+    title: "Virtual twin memory design",
+    detail: "Turning interviews, documents, and visitor conversations into structured personal context.",
+    date: "This week",
+  },
+  {
+    title: "RAG quality and hallucination control",
+    detail: "Making retrieval-grounded assistants answer from trusted knowledge instead of plausible guesses.",
+    date: "This week",
+  },
+  {
+    title: "Leadership in AI transformation",
+    detail: "How managers can redesign decision-making, talent models, and execution rhythms around AI.",
+    date: "Recent",
+  },
+  {
+    title: "Capital markets technology",
+    detail: "Where automation, data platforms, and workflow intelligence can change front-office productivity.",
+    date: "Recent",
+  },
+  {
+    title: "Personal knowledge systems",
+    detail: "Building durable ways to capture career stories, values, project lessons, and management philosophy.",
+    date: "Earlier",
+  },
+];
+
 const initialMessages: Message[] = [
   {
     id: 1,
@@ -50,7 +83,7 @@ function VirtualTwinExperience() {
   const connectionWarningShownRef = useRef(false);
   const [introHidden, setIntroHidden] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [historyCollapsed, setHistoryCollapsed] = useState(true);
+  const [interestsCollapsed, setInterestsCollapsed] = useState(true);
   const [messages, setMessages] = useState(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [visitorName, setVisitorName] = useState("");
@@ -119,7 +152,7 @@ function VirtualTwinExperience() {
       setConnectionOverlay("name");
     }
     if (window.innerWidth >= 1100) {
-      setHistoryCollapsed(false);
+      setInterestsCollapsed(false);
     }
     window.setTimeout(() => {
       if (visitorName) {
@@ -387,38 +420,32 @@ function VirtualTwinExperience() {
       </section>
 
       <aside
-        id="historyPanel"
-        className={`history-panel${historyCollapsed ? " is-collapsed" : ""}`}
-        aria-label="Historical conversations"
+        id="interestsPanel"
+        className={`interests-panel${interestsCollapsed ? " is-collapsed" : ""}`}
+        aria-label="Martin's recent interests"
       >
         <button
-          id="historyToggle"
+          id="interestsToggle"
           className="panel-toggle"
           type="button"
-          aria-label="Toggle historical conversations"
-          onClick={() => setHistoryCollapsed((current) => !current)}
+          aria-label="Toggle Martin's recent interests"
+          onClick={() => setInterestsCollapsed((current) => !current)}
         >
           <span className="toggle-mark" aria-hidden="true" />
         </button>
         <div className="panel-content">
           <div className="panel-heading">
-            <span>History</span>
-            <button className="ghost-icon" type="button" aria-label="Search conversations">
-              &#8981;
-            </button>
+            <span>Martin&apos;s Recent Interests</span>
           </div>
-          <button className="history-item is-active" type="button">
-            <span>Welcome conversation</span>
-            <time>Today</time>
-          </button>
-          <button className="history-item" type="button">
-            <span>Career stories</span>
-            <time>Draft</time>
-          </button>
-          <button className="history-item" type="button">
-            <span>Leadership philosophy</span>
-            <time>Draft</time>
-          </button>
+          <div className="interest-list" aria-label="Recent interests ranked by recency">
+            {recentInterests.map((interest) => (
+              <article className="interest-item" key={interest.title}>
+                <time>{interest.date}</time>
+                <h2>{interest.title}</h2>
+                <p>{interest.detail}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </aside>
 
