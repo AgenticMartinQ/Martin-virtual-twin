@@ -14,6 +14,7 @@ type DynamicVariables = Record<string, string | number | boolean>;
 type SessionResponse = {
   agent_id: string;
   conversation_token?: string;
+  database_conversation_id?: string;
   voice_id?: string;
   dynamic_variables: DynamicVariables;
 };
@@ -83,6 +84,9 @@ function VirtualTwinExperience() {
   const connectionWarningShownRef = useRef(false);
   const isConnectedRef = useRef(false);
   const endSessionRef = useRef<() => void>(() => undefined);
+  const databaseConversationIdRef = useRef("");
+  const conversationEndedRef = useRef(false);
+  const logQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [introHidden, setIntroHidden] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [interestsCollapsed, setInterestsCollapsed] = useState(true);
@@ -93,6 +97,7 @@ function VirtualTwinExperience() {
   const [connectionOverlay, setConnectionOverlay] = useState<ConnectionOverlay>(null);
   const [connectionNote, setConnectionNote] = useState("Ready");
   const [connectionStarted, setConnectionStarted] = useState(false);
+  const [databaseConversationId, setDatabaseConversationId] = useState("");
 
   const appendMessage = useCallback((role: Message["role"], text: string) => {
     setMessages((current) => [...current, { id: Date.now() + Math.random(), role, text }]);
@@ -117,6 +122,7 @@ function VirtualTwinExperience() {
     },
     onDisconnect: () => {
       setConnectionNote("Ended");
+      markConversationEnded();
     },
     onError: (message) => {
       setConnectionNote("Needs attention");
@@ -138,10 +144,12 @@ function VirtualTwinExperience() {
           return;
         }
         appendMessage("visitor", message);
+        logConversationTurn("visitor", message);
         return;
       }
 
       appendMessage("twin", message);
+      logConversationTurn("twin", message);
     },
   });
 
@@ -154,28 +162,94 @@ function VirtualTwinExperience() {
   }, [conversation.endSession, isConnected]);
 
   useEffect(() => {
+    databaseConversationIdRef.current = databaseConversationId;
+  }, [databaseConversationId]);
+
+  useEffect(() => {
     function endActiveSession() {
       if (isConnectedRef.current) {
+        beaconConversationEnded();
         endSessionRef.current();
-      }
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === "hidden") {
-        endActiveSession();
       }
     }
 
     window.addEventListener("pagehide", endActiveSession);
     window.addEventListener("beforeunload", endActiveSession);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("pagehide", endActiveSession);
       window.removeEventListener("beforeunload", endActiveSession);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  function logConversationTurn(role: Message["role"], text: string) {
+    const conversationId = databaseConversationIdRef.current;
+
+    if (!conversationId) {
+      return;
+    }
+
+    logQueueRef.current = logQueueRef.current
+      .catch(() => undefined)
+      .then(() =>
+        fetch("/api/conversations/log", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            conversationId,
+            role,
+            text,
+          }),
+          keepalive: true,
+        }).then(() => undefined)
+      )
+      .catch(() => undefined);
+  }
+
+  function beaconConversationEnded() {
+    const conversationId = databaseConversationIdRef.current;
+
+    if (!conversationId || conversationEndedRef.current) {
+      return;
+    }
+
+    conversationEndedRef.current = true;
+    const body = JSON.stringify({ conversationId });
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/conversations/end", new Blob([body], { type: "application/json" }));
+      return;
+    }
+
+    void fetch("/api/conversations/end", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body,
+      keepalive: true,
+    }).catch(() => undefined);
+  }
+
+  function markConversationEnded() {
+    const conversationId = databaseConversationIdRef.current;
+
+    if (!conversationId || conversationEndedRef.current) {
+      return;
+    }
+
+    conversationEndedRef.current = true;
+    void fetch("/api/conversations/end", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ conversationId }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }
 
   function revealConversation() {
     setIntroHidden(true);
@@ -274,9 +348,14 @@ function VirtualTwinExperience() {
       const {
         agent_id: agentId,
         conversation_token: conversationToken,
+        database_conversation_id: newDatabaseConversationId,
         voice_id: voiceId,
         dynamic_variables: dynamicVariables,
       } = await getSessionConfig(cleanName);
+
+      setDatabaseConversationId(newDatabaseConversationId ?? "");
+      databaseConversationIdRef.current = newDatabaseConversationId ?? "";
+      conversationEndedRef.current = false;
 
       const sessionOptions = {
         userId: "martin-public-visitor",
@@ -332,6 +411,7 @@ function VirtualTwinExperience() {
     }
 
     conversation.endSession();
+    markConversationEnded();
     setConnectionNote("Ending");
   }
 
@@ -365,6 +445,7 @@ function VirtualTwinExperience() {
         localUserMessageRef.current = text;
         pendingOutboundMessageRef.current = text;
         appendMessage("visitor", text);
+        logConversationTurn("visitor", text);
         setInputValue("");
         return;
       }
@@ -378,6 +459,7 @@ function VirtualTwinExperience() {
 
     localUserMessageRef.current = text;
     appendMessage("visitor", text);
+    logConversationTurn("visitor", text);
     conversation.sendUserActivity();
     conversation.sendUserMessage(text);
     setInputValue("");

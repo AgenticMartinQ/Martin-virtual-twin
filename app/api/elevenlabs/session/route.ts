@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getTwinDynamicVariables, type TwinMode } from "@/lib/twin-context";
 
 const requestSchema = z.object({
@@ -64,14 +65,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
+  const userId = process.env.MARTIN_USER_ID ?? "martin";
+  const supabase = getSupabaseAdmin();
+  let databaseConversationId = "";
+
+  if (supabase) {
+    const { data: conversation, error } = await supabase
+      .from("conversations")
+      .insert({
+        user_id: userId,
+        mode,
+        visitor_id: visitorName ?? null,
+        transcript: [],
+        raw_payload: {},
+        started_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: "Unable to create conversation record." }, { status: 500 });
+    }
+
+    databaseConversationId = conversation.id;
+  }
+
   return NextResponse.json({
     agent_id: agentId,
     conversation_token: conversationToken,
+    database_conversation_id: databaseConversationId,
     voice_id: voiceId,
     dynamic_variables: {
       ...memoryDynamicVariables,
       mode,
       user_name: "Martin",
+      database_conversation_id: databaseConversationId,
       visitor_name: visitorName ?? "",
       visitor_id: visitorId,
     },

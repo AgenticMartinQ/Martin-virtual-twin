@@ -62,26 +62,34 @@ export async function POST(request: Request) {
     const mode = dynamicVariables.mode === "learning" ? "learning" : "socialization";
     const userId = process.env.MARTIN_USER_ID ?? "martin";
     const visitorName = typeof dynamicVariables.visitor_name === "string" ? dynamicVariables.visitor_name : null;
+    const databaseConversationId =
+      typeof dynamicVariables.database_conversation_id === "string" ? dynamicVariables.database_conversation_id : null;
 
-    const { data: conversation, error } = await supabase
-      .from("conversations")
-      .upsert(
-        {
-        elevenlabs_conversation_id: event.data.conversation_id,
-        user_id: userId,
-        mode,
-        visitor_id: visitorName,
-        transcript: event.data.transcript ?? [],
-        raw_payload: event,
-        started_at: event.data.metadata?.start_time_unix_secs
-          ? new Date(event.data.metadata.start_time_unix_secs * 1000).toISOString()
-          : null,
-        ended_at: event.event_timestamp ? new Date(event.event_timestamp * 1000).toISOString() : null,
-        },
-        { onConflict: "elevenlabs_conversation_id" }
-      )
-      .select("id")
-      .single();
+    const webhookConversationData = {
+      elevenlabs_conversation_id: event.data.conversation_id,
+      user_id: userId,
+      mode,
+      visitor_id: visitorName,
+      transcript: event.data.transcript ?? [],
+      raw_payload: event,
+      started_at: event.data.metadata?.start_time_unix_secs
+        ? new Date(event.data.metadata.start_time_unix_secs * 1000).toISOString()
+        : null,
+      ended_at: event.event_timestamp ? new Date(event.event_timestamp * 1000).toISOString() : null,
+    };
+
+    const { data: conversation, error } = databaseConversationId
+      ? await supabase
+          .from("conversations")
+          .update(webhookConversationData)
+          .eq("id", databaseConversationId)
+          .select("id")
+          .single()
+      : await supabase
+          .from("conversations")
+          .upsert(webhookConversationData, { onConflict: "elevenlabs_conversation_id" })
+          .select("id")
+          .single();
 
     if (error) {
       return NextResponse.json({ error: "Unable to save conversation" }, { status: 500 });
