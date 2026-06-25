@@ -977,6 +977,10 @@ h1 {
 }
 
 .admin-panel {
+  display: flex;
+  max-height: min(620px, calc(100vh - 300px));
+  min-height: 280px;
+  flex-direction: column;
   margin-top: 18px;
   padding: 18px;
 }
@@ -992,6 +996,24 @@ h1 {
 .admin-table {
   display: grid;
   gap: 10px;
+  overflow-y: auto;
+  padding-right: 8px;
+  scrollbar-color: rgba(105, 208, 197, 0.7) rgba(255, 255, 255, 0.1);
+  scrollbar-width: thin;
+}
+
+.admin-table::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-table::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-table::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(105, 208, 197, 0.68);
 }
 
 .admin-row {

@@ -112,7 +112,7 @@ export async function POST(request: Request) {
   }
 
   const rows = (data ?? []) as ConversationRow[];
-  const recent = rows.slice(0, 30).map((row) => {
+  const recent = rows.map((row) => {
     const transcript = getTranscript(row);
     return {
       id: row.id,
