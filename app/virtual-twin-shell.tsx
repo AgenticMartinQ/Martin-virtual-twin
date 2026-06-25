@@ -21,20 +21,27 @@ type SessionResponse = {
 
 type ConnectionOverlay = "name" | "loading" | "success" | null;
 
-const recentInterests = [
+type Interest = {
+  title: string;
+  detail: string;
+  date: string;
+  sourceUrl?: string;
+};
+
+const fallbackInterests: Interest[] = [
   {
     title: "Agentic AI for financial services",
-    detail: "How autonomous workflows can improve banking operations, advisory productivity, and risk controls.",
+    detail: "Martin may be watching how autonomous workflows can improve banking operations, advisory productivity, and risk controls.",
     date: "Latest",
   },
   {
     title: "Virtual twin memory design",
-    detail: "Turning interviews, documents, and visitor conversations into structured personal context.",
+    detail: "Martin may see memory design as the foundation for making virtual agents more representative and trustworthy.",
     date: "This week",
   },
   {
     title: "RAG quality and hallucination control",
-    detail: "Making retrieval-grounded assistants answer from trusted knowledge instead of plausible guesses.",
+    detail: "Martin may care about retrieval quality because grounded answers matter more than fluent guesses.",
     date: "This week",
   },
   {
@@ -98,6 +105,7 @@ function VirtualTwinExperience() {
   const [connectionNote, setConnectionNote] = useState("Ready");
   const [connectionStarted, setConnectionStarted] = useState(false);
   const [databaseConversationId, setDatabaseConversationId] = useState("");
+  const [recentInterests, setRecentInterests] = useState<Interest[]>(fallbackInterests);
   const [adminPortalOpen, setAdminPortalOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
@@ -168,6 +176,33 @@ function VirtualTwinExperience() {
   useEffect(() => {
     databaseConversationIdRef.current = databaseConversationId;
   }, [databaseConversationId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDailyInterests() {
+      try {
+        const response = await fetch("/api/interests", {
+          cache: "no-store",
+        });
+        const data = (await response.json()) as { interests?: Interest[] };
+
+        if (isMounted && Array.isArray(data.interests) && data.interests.length > 0) {
+          setRecentInterests(data.interests);
+        }
+      } catch {
+        if (isMounted) {
+          setRecentInterests(fallbackInterests);
+        }
+      }
+    }
+
+    void loadDailyInterests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     function endActiveSession() {
