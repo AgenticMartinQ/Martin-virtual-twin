@@ -27,6 +27,12 @@ type ConversationRow = {
   transcript: unknown;
 };
 
+type AdminTranscriptItem = {
+  role: string;
+  message: string;
+  created_at: string | null;
+};
+
 function isWithin(dateValue: string | null, since: Date) {
   if (!dateValue) {
     return false;
@@ -68,6 +74,16 @@ function getPreview(row: ConversationRow) {
     visitor: typeof firstVisitorMessage?.message === "string" ? firstVisitorMessage.message : "",
     twin: typeof firstTwinMessage?.message === "string" ? firstTwinMessage.message : "",
   };
+}
+
+function getAdminTranscript(row: ConversationRow): AdminTranscriptItem[] {
+  return getTranscript(row)
+    .map((item) => ({
+      role: typeof item.role === "string" ? item.role : "message",
+      message: typeof item.message === "string" ? item.message : "",
+      created_at: typeof item.created_at === "string" ? item.created_at : null,
+    }))
+    .filter((item) => item.message.trim().length > 0);
 }
 
 export async function POST(request: Request) {
@@ -124,6 +140,7 @@ export async function POST(request: Request) {
       is_active: !row.ended_at,
       message_count: transcript.length,
       preview: getPreview(row),
+      transcript: getAdminTranscript(row),
     };
   });
 

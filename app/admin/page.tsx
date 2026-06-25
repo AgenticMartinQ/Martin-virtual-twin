@@ -22,6 +22,11 @@ type RecentConversation = {
     visitor: string;
     twin: string;
   };
+  transcript: {
+    role: string;
+    message: string;
+    created_at: string | null;
+  }[];
 };
 
 type AdminStats = {
@@ -67,6 +72,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState<RecentConversation | null>(null);
 
   async function loadStats(nextPassword = savedPassword) {
     if (!nextPassword) {
@@ -92,6 +98,7 @@ export default function AdminPage() {
       }
 
       setStats(data as AdminStats);
+      setSelectedConversation(null);
       setSavedPassword(nextPassword);
       window.sessionStorage.setItem("martin-admin-password", nextPassword);
     } catch (caughtError) {
@@ -167,7 +174,7 @@ export default function AdminPage() {
               {stats.recent.length ? (
                 <div className="admin-table">
                   {stats.recent.map((conversation) => (
-                    <article className="admin-row" key={conversation.id}>
+                    <button className="admin-row" key={conversation.id} type="button" onClick={() => setSelectedConversation(conversation)}>
                       <div>
                         <strong>{conversation.visitor_name}</strong>
                         <span>{conversation.mode}</span>
@@ -181,13 +188,46 @@ export default function AdminPage() {
                         <p>{conversation.preview.visitor || "No visitor message yet"}</p>
                         <p>{conversation.preview.twin || "No twin response yet"}</p>
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               ) : (
                 <p className="admin-empty">No conversations found in the last 7 days.</p>
               )}
             </section>
+
+            {selectedConversation ? (
+              <section className="admin-detail-overlay" aria-label="Conversation details" aria-modal="true" role="dialog">
+                <article className="admin-detail">
+                  <header className="admin-detail-header">
+                    <div>
+                      <p>Conversation Detail</p>
+                      <h2>{selectedConversation.visitor_name}</h2>
+                      <span>
+                        {formatDate(selectedConversation.created_at)} / {selectedConversation.message_count} messages
+                      </span>
+                    </div>
+                    <button type="button" onClick={() => setSelectedConversation(null)} aria-label="Close conversation details">
+                      Close
+                    </button>
+                  </header>
+
+                  <div className="admin-detail-transcript">
+                    {selectedConversation.transcript.length ? (
+                      selectedConversation.transcript.map((item, index) => (
+                        <article className={`admin-detail-message ${item.role}`} key={`${selectedConversation.id}-${index}`}>
+                          <span>{item.role === "visitor" || item.role === "user" ? selectedConversation.visitor_name : "Martin's Twin"}</span>
+                          <p>{item.message}</p>
+                          {item.created_at ? <time>{formatDate(item.created_at)}</time> : null}
+                        </article>
+                      ))
+                    ) : (
+                      <p className="admin-empty">No transcript content saved for this record.</p>
+                    )}
+                  </div>
+                </article>
+              </section>
+            ) : null}
           </>
         )}
       </section>
