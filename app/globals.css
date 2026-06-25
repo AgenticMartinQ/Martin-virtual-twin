@@ -534,10 +534,10 @@ h1 {
   left: 50%;
   bottom: clamp(18px, 4vh, 34px);
   display: grid;
-  grid-template-columns: 52px minmax(240px, 620px) 72px;
+  grid-template-columns: 52px minmax(220px, 560px) 72px 72px;
   gap: 10px;
   align-items: center;
-  width: min(780px, calc(100vw - 40px));
+  width: min(860px, calc(100vw - 40px));
   min-height: 76px;
   padding: 11px;
   border-radius: 8px;
@@ -555,7 +555,8 @@ h1 {
 }
 
 .mic-button,
-.send-button {
+.send-button,
+.exit-button {
   display: grid;
   place-items: center;
   height: 52px;
@@ -633,7 +634,14 @@ h1 {
   background: var(--accent-2);
 }
 
-.send-button:disabled {
+.exit-button {
+  border: 1px solid rgba(248, 245, 238, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+.send-button:disabled,
+.exit-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -678,7 +686,7 @@ h1 {
   }
 
   .chat-dock {
-    grid-template-columns: 52px minmax(0, 1fr) 64px;
+    grid-template-columns: 52px minmax(0, 1fr) 64px 64px;
   }
 }
 
@@ -708,5 +716,14 @@ h1 {
   .conversation-panel {
     left: 16px;
     max-height: 38vh;
+  }
+
+  .chat-dock {
+    grid-template-columns: 48px minmax(0, 1fr) 58px;
+  }
+
+  .exit-button {
+    grid-column: 1 / -1;
+    height: 42px;
   }
 }

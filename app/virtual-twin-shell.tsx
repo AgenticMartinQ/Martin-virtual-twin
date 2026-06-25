@@ -1,7 +1,7 @@
 "use client";
 
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
-import { FormEvent, useCallback, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 type Message = {
   id: number;
@@ -81,6 +81,8 @@ function VirtualTwinExperience() {
   const localUserMessageRef = useRef<string | null>(null);
   const pendingOutboundMessageRef = useRef<string | null>(null);
   const connectionWarningShownRef = useRef(false);
+  const isConnectedRef = useRef(false);
+  const endSessionRef = useRef<() => void>(() => undefined);
   const [introHidden, setIntroHidden] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [interestsCollapsed, setInterestsCollapsed] = useState(true);
@@ -145,6 +147,35 @@ function VirtualTwinExperience() {
 
   const isConnected = conversation.status === "connected";
   const isConnecting = conversation.status === "connecting";
+
+  useEffect(() => {
+    isConnectedRef.current = isConnected;
+    endSessionRef.current = conversation.endSession;
+  }, [conversation.endSession, isConnected]);
+
+  useEffect(() => {
+    function endActiveSession() {
+      if (isConnectedRef.current) {
+        endSessionRef.current();
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        endActiveSession();
+      }
+    }
+
+    window.addEventListener("pagehide", endActiveSession);
+    window.addEventListener("beforeunload", endActiveSession);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", endActiveSession);
+      window.removeEventListener("beforeunload", endActiveSession);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   function revealConversation() {
     setIntroHidden(true);
@@ -293,6 +324,15 @@ function VirtualTwinExperience() {
       connectionWarningShownRef.current = true;
       appendMessage("twin", "The ElevenLabs connection is not ready yet. Please wait for the connection to complete before using voice input.");
     }
+  }
+
+  function exitChat() {
+    if (!isConnected && !isConnecting) {
+      return;
+    }
+
+    conversation.endSession();
+    setConnectionNote("Ending");
   }
 
   async function submitVisitorName(event: FormEvent<HTMLFormElement>) {
@@ -503,6 +543,9 @@ function VirtualTwinExperience() {
         </label>
         <button className="send-button" type="submit" aria-label="Send message" disabled={!inputValue.trim()}>
           Send
+        </button>
+        <button className="exit-button" type="button" aria-label="Exit chat" disabled={!isConnected && !isConnecting} onClick={exitChat}>
+          Exit
         </button>
       </form>
     </main>
