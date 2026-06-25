@@ -182,11 +182,31 @@ function VirtualTwinExperience() {
     };
   }, []);
 
+  function estimateSessionTokens(currentMessages: Message[]) {
+    const conversationText = currentMessages
+      .filter((message) => message.id !== 1 && message.id !== 3)
+      .map((message) => message.text)
+      .join("\n");
+
+    if (!conversationText.trim()) {
+      return 0;
+    }
+
+    return Math.max(1, Math.ceil(conversationText.length / 4));
+  }
+
+  function getExitMessage() {
+    const estimatedTokens = estimateSessionTokens(messages);
+    const tokenText = estimatedTokens > 0 ? `about ${estimatedTokens.toLocaleString()} text tokens` : "a very small number of text tokens";
+
+    return `Thanks for chatting with Martin's Twin. This session used ${tokenText} based on the visible conversation text. If this experience was useful, would you like to sponsor HK$1 to help cover token costs and support further development?`;
+  }
+
   function logConversationTurn(role: Message["role"], text: string) {
     const conversationId = databaseConversationIdRef.current;
 
     if (!conversationId) {
-      return;
+      return Promise.resolve();
     }
 
     logQueueRef.current = logQueueRef.current
@@ -206,6 +226,8 @@ function VirtualTwinExperience() {
         }).then(() => undefined)
       )
       .catch(() => undefined);
+
+    return logQueueRef.current;
   }
 
   function beaconConversationEnded() {
@@ -405,11 +427,14 @@ function VirtualTwinExperience() {
     }
   }
 
-  function exitChat() {
+  async function exitChat() {
     if (!isConnected && !isConnecting) {
       return;
     }
 
+    const exitMessage = getExitMessage();
+    appendMessage("twin", exitMessage);
+    await logConversationTurn("twin", exitMessage);
     conversation.endSession();
     markConversationEnded();
     setConnectionNote("Ending");
