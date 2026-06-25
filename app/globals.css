@@ -183,6 +183,74 @@ h1 {
   backdrop-filter: blur(12px);
 }
 
+.tips-widget {
+  position: absolute;
+  z-index: 6;
+  left: clamp(16px, 2vw, 28px);
+  bottom: clamp(18px, 4vh, 34px);
+  width: min(180px, calc(100vw - 32px));
+  color: var(--ink);
+}
+
+.tips-widget[open] {
+  width: min(246px, calc(100vw - 32px));
+}
+
+.tips-widget summary {
+  display: grid;
+  gap: 2px;
+  min-height: 54px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--glass);
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28);
+  list-style: none;
+  backdrop-filter: blur(18px);
+}
+
+.tips-widget summary::-webkit-details-marker {
+  display: none;
+}
+
+.tips-widget summary span {
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tips-widget summary strong {
+  color: rgba(248, 245, 238, 0.88);
+  font-size: 0.86rem;
+}
+
+.tips-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(7, 14, 18, 0.62);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.tips-card p {
+  margin: 0;
+  color: rgba(248, 245, 238, 0.78);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.tips-card img {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 .connection-overlay {
   position: absolute;
   inset: 0;
@@ -688,6 +756,15 @@ h1 {
   .chat-dock {
     grid-template-columns: 52px minmax(0, 1fr) 64px 64px;
   }
+
+  .tips-widget {
+    bottom: 102px;
+    width: min(220px, calc(100vw - 32px));
+  }
+
+  .tips-widget[open] {
+    width: min(220px, calc(100vw - 32px));
+  }
 }
 
 @media (max-width: 620px) {
@@ -725,5 +802,12 @@ h1 {
   .exit-button {
     grid-column: 1 / -1;
     height: 42px;
+  }
+
+  .tips-widget {
+    right: 16px;
+    bottom: 118px;
+    left: auto;
+    width: min(210px, calc(100vw - 32px));
   }
 }

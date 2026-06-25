@@ -541,6 +541,17 @@ function VirtualTwinExperience() {
         </button>
       </section>
 
+      <details className="tips-widget">
+        <summary>
+          <span>Tips</span>
+          <strong>Support token cost</strong>
+        </summary>
+        <div className="tips-card">
+          <p>If this chat was useful, a small PayMe tip helps sponsor the token cost of keeping Martin&apos;s Twin running.</p>
+          <img src="/assets/payme-qr.jpg" alt="PayMe QR code for tipping Martin" />
+        </div>
+      </details>
+
       <aside
         id="interestsPanel"
         className={`interests-panel${interestsCollapsed ? " is-collapsed" : ""}`}
