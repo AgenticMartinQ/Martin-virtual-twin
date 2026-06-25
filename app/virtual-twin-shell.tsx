@@ -641,7 +641,7 @@ function VirtualTwinExperience() {
         </button>
       </section>
 
-      <details className="tips-widget">
+      <details className={`tips-widget${introHidden ? "" : " is-hidden"}`}>
         <summary>
           <img src="/assets/payme-qr.jpg" alt="" aria-hidden="true" />
           <span>

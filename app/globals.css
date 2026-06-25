@@ -196,6 +196,12 @@ h1 {
   width: min(246px, calc(100vw - 32px));
 }
 
+.tips-widget.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .tips-widget summary {
   display: grid;
   grid-template-columns: 46px minmax(0, 1fr);
