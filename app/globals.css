@@ -186,7 +186,7 @@ h1 {
 .tips-widget {
   position: absolute;
   z-index: 6;
-  left: clamp(16px, 2vw, 28px);
+  right: clamp(16px, 2vw, 28px);
   bottom: clamp(18px, 4vh, 34px);
   width: min(230px, calc(100vw - 32px));
   color: var(--ink);
@@ -273,8 +273,8 @@ h1 {
 .admin-entry-button {
   position: absolute;
   z-index: 6;
-  top: clamp(16px, 3vh, 28px);
-  left: 50%;
+  bottom: clamp(18px, 4vh, 34px);
+  left: clamp(16px, 2vw, 28px);
   min-height: 38px;
   padding: 0 15px;
   border: 1px solid var(--line);
@@ -284,7 +284,6 @@ h1 {
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
-  transform: translateX(-50%);
   backdrop-filter: blur(16px);
   transition:
     background 180ms ease,
@@ -296,7 +295,7 @@ h1 {
 .admin-entry-button:focus-visible {
   background: rgba(255, 255, 255, 0.12);
   color: var(--ink);
-  transform: translateX(-50%) translateY(-1px);
+  transform: translateY(-1px);
 }
 
 .admin-portal-overlay {
@@ -1071,6 +1070,10 @@ h1 {
     width: min(220px, calc(100vw - 32px));
   }
 
+  .admin-entry-button {
+    bottom: 102px;
+  }
+
   .tips-widget[open] {
     width: min(220px, calc(100vw - 32px));
   }
@@ -1126,6 +1129,11 @@ h1 {
     bottom: 118px;
     left: auto;
     width: min(210px, calc(100vw - 32px));
+  }
+
+  .admin-entry-button {
+    bottom: 118px;
+    left: 16px;
   }
 
   .admin-header,
